@@ -1,32 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
-    <title>Wetter-App</title>
+    <meta charset="UTF-8">
+    <title>Wetterstation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.min.js"></script>
 </head>
 <body>
-    <h1>Aktuelles Wetter</h1>
-    <p>Temperatur: <span id="temperature"></span></p>
-    <p>Luftfeuchtigkeit: <span id="humidity"></span</p>
-    <p>Luftdruck: <span id="pressure"></span></p>
-
+    <h1>Wetterstation</h1>
+    <div id="weather-data"></div>
     <script>
+        // SocketIO verbinden
         var socket = io();
 
-socket.on('connect', function() {
-  socket.emit('register', { lat: '51.5', long: '7.6' });
-});
-
-socket.on('weather_update', function(data) {
-    console.log(data)
-  document.getElementById('temperature').textContent = data.temperature + '°C';
-  document.getElementById('humidity').textContent = data.humidity + '%';
-  document.getElementById('pressure').textContent = data.pressure + 'hPa';
-});
-
-socket.on('registration_successful', function(data) {
-  console.log(data.message);
-});
+        // Wetterdaten empfangen
+        socket.on("weather_update", function(data) {
+            // Wetterdaten auf der Website anzeigen
+            var weatherData = document.getElementById("weather-data");
+            weatherData.innerHTML =
+                "Feuchtigkeit: " + data.humidity + "%<br/>" +
+                "Luftdruck: " + data.pressure + " hPa<br/>" +
+                "Temperatur: " + data.temperature + " °C";
+        });
     </script>
 </body>
 </html>
