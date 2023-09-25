@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+    <title>Wetter-App</title>
+</head>
+<body>
+    <h1>Aktuelles Wetter</h1>
+    <p>Temperatur: <span id="temperature"></span></p>
+    <p>Luftfeuchtigkeit: <span id="humidity"></span</p>
+    <p>Luftdruck: <span id="pressure"></span></p>
+
+    <script>
+        var socket = io();
+
+socket.on('connect', function() {
+  socket.emit('register', { lat: '51.5', long: '7.6' });
+});
+
+socket.on('weather_update', function(data) {
+    console.log(data)
+  document.getElementById('temperature').textContent = data.temperature + '°C';
+  document.getElementById('humidity').textContent = data.humidity + '%';
+  document.getElementById('pressure').textContent = data.pressure + 'hPa';
+});
+
+socket.on('registration_successful', function(data) {
+  console.log(data.message);
+});
+    </script>
+</body>
+</html>
