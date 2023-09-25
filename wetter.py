@@ -1,82 +1,92 @@
-from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
 import random
-import threading
 import time
+import json
+from flask import Flask, render_template, request, send_file
+from flask_socketio import SocketIO, emit
+from threading import Thread
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)
+# Singleton Pattern
+class WeatherData:
+    def __init__(self):
+        self.humidity = random.randint(0, 100)
+        self.pressure = random.randint(950, 1050)
+        self.temperature = random.randint(0, 40)
 
-# weather-Klasse, die die weatherdaten speichert und Observers führt
-class Weather:
-    _instance = None
+        self._observers = []
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(Weather, cls).__new__(cls)
-            cls._instance.initialize()
-        return cls._instance
-
-    def initialize(self):
-        self.observers = []
-        self.temperature = 0
-        self.humidity = 0
-        self.pressure = 0
+    @staticmethod
+    def get_instance():
+        if not hasattr(WeatherData, "_instance"):
+            WeatherData._instance = WeatherData()
+        return WeatherData._instance
 
     def add_observer(self, observer):
-        self.observers.append(observer)
+        self._observers.append(observer)
 
     def remove_observer(self, observer):
-        self.observers.remove(observer)
-
-    def set_weatherdata(self, temperature, humidity, pressure):
-        self.temperature = temperature
-        self.humidity = humidity
-        self.pressure = pressure
-        self.notify_observers()
+        try:
+            self._observers.remove(observer)
+        except:
+            pass
 
     def notify_observers(self):
-        for observer in self.observers:
-            observer.update(self)
+        for observer in self._observers:
+            observer.on_update(self)
+    
+    def toJson(self):
+        return {"humidity": self.humidity, "pressure": self.pressure, "temperature": self.temperature}
 
-# Observerklasse, die die weatherdaten speichert und an die Clients sendet
-class weatherObserver(threading.Thread):
-    def __init__(self, weather_data):
-        super(weatherObserver, self).__init__()
-        self.weather_data = weather_data
+# Observer Pattern
+class WeatherObserver:
+    def __init__(self, socketio):
+        self.socketio = socketio
 
-    def run(self):
-        while True:
-            self.update(self.weather_data)
-            time.sleep(60)
+    def on_update(self, weather_data):
+        self.socketio.emit("weather_update", weather_data.toJson()) #fehler im emit/ keine daten zum emiten ?
 
-    def update(self, weather_data):
-        self.temperature = weather_data.temperature
-        self.humidity = weather_data.humidity
-        self.pressure = weather_data.pressure
+# Flask App
+app = Flask(__name__)
+app.config["SECRET_KEY"] = "secret"
+socketio = SocketIO(app)
 
-        # Die Wetterdaten an die Clients senden
-        emit('weather_update', {'temperature': self.temperature, 'humidity': self.humidity, 'pressure': self.pressure})
+# Weather Data
+weather_data = WeatherData.get_instance()
 
-weatherS = Weather()
+# Observer
+observer = WeatherObserver(socketio)
+weather_data.add_observer(observer)
 
-@app.route('/')
-def index():  
-    print("Print")
-    return render_template('index.html')
+# WebSocket
+@socketio.on("connect")
+def connect():
+    emit("weather_connected", {"message": "Connected to weather station"})
 
-@socketio.on('register')
-def register(data):
-    observer1 = weatherObserver(weatherS)
-    latitude = data.get('lat')
-    longitude = data.get('long')
+@socketio.on("disconnect")
+def disconnect():
+    emit("weather_disconnected", {"message": "Disconnected from weather station"})
 
-    weatherS.add_observer(observer1)
-    observer1.start()
+# Generate Weather Data
+def generate_weather_data():
+    while True:
+        weather_data.humidity = random.randint(0, 100)
+        weather_data.pressure = random.randint(950, 1050)
+        weather_data.temperature = random.randint(0, 40)
 
-    emit('registration_successful', {'message': 'success!'})
+        # Send weather data to observers
+        weather_data.notify_observers()
 
+        # Sleep for 1 second
+        time.sleep(1)
 
-if __name__ == '__main__':
-    socketio.run(app, host='localhost', port=5000)
+# Start generating weather data
+t = Thread(target=generate_weather_data)
+t.daemon = True
+t.start()
+
+# Render Website
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+if __name__ == "__main__":
+    socketio.run(app, debug=True)
