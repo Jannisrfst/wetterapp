@@ -1,9 +1,11 @@
+
 import random
 import time
 import json
 from flask import Flask, render_template, request, send_file
 from flask_socketio import SocketIO, emit
 from threading import Thread
+
 
 # Singleton Pattern
 class WeatherData:
@@ -42,7 +44,8 @@ class WeatherObserver:
         self.socketio = socketio
 
     def on_update(self, weather_data):
-        self.socketio.emit("weather_update", weather_data.toJson()) #fehler im emit/ keine daten zum emiten ?
+        print("Weather update:", weather_data.toJson())
+        self.socketio.emit("weather_update", weather_data.toJson())
 
 # Flask App
 app = Flask(__name__)
@@ -59,11 +62,12 @@ weather_data.add_observer(observer)
 # WebSocket
 @socketio.on("connect")
 def connect():
-    emit("weather_connected", {"message": "Connected to weather station"})
+    print("Client connected")
+    socketio.emit("weather_connected", {"message": "Connected to weather station"})
 
 @socketio.on("disconnect")
 def disconnect():
-    emit("weather_disconnected", {"message": "Disconnected from weather station"})
+    socketio.emit("weather_disconnected", {"message": "Disconnected from weather station"})
 
 # Generate Weather Data
 def generate_weather_data():
@@ -82,6 +86,8 @@ def generate_weather_data():
 t = Thread(target=generate_weather_data)
 t.daemon = True
 t.start()
+
+
 
 # Render Website
 @app.route("/")
