@@ -1,25 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
     <title>Wetterstation</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
 <body>
-    <h1>Wetterstation</h1>
-    <div id="weather-data"></div>
-    <script>
-        // SocketIO verbinden
-        var socket = io();
+    <form id="location_form">
+        <label for="latitude">Latitude:</label><br>
+        <input type="text" id="latitude" name="latitude"><br>
+        <label for="longitude">Longitude:</label><br>
+        <input type="text" id="longitude" name="longitude"><br>
+        <input type="submit" value="Register">
+    </form>
 
-        // Wetterdaten empfangen
-        socket.on("weather_update", function(data) {
-            // Wetterdaten auf der Website anzeigen
-            var weatherData = document.getElementById("weather-data");
-            weatherData.innerHTML =
-                "Feuchtigkeit: " + data.humidity + "%<br/>" +
-                "Luftdruck: " + data.pressure + " hPa<br/>" +
-                "Temperatur: " + data.temperature + " °C";
+    <div id="weather_data"></div>
+
+    <script>
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        socket.on('connect', function() {
+            console.log('Connected to weather station');
+        });
+        socket.on('weather_update', function(msg) {
+            document.getElementById('weather_data').innerHTML = JSON.stringify(msg);
+        });
+
+        document.getElementById('location_form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var latitude = document.getElementById('latitude').value;
+            var longitude = document.getElementById('longitude').value;
+
+            socket.emit('location_data', { 'latitude': latitude, 'longitude': longitude });
         });
     </script>
 </body>
