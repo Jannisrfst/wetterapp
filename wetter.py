@@ -29,11 +29,13 @@ class WeatherData:
 
     def update_weather_data(self):
         while not thread_stop_event.is_set():
-            self.humidity = random.randint(0, 100)
-            self.pressure = random.randint(950, 1050)
-            self.temperature = random.randint(0, 40)
-            self.notify_observers()
+            for observer in self._observers.values():
+                self.humidity = random.randint(0, 100)
+                self.pressure = random.randint(950, 1050)
+                self.temperature = random.randint(0, 40)
+                observer.on_update(self)
             time.sleep(5)  # update every 5 seconds
+
 
     def get_weather_data_for_location(self, latitude, longitude):
         # Use the latitude and longitude to generate weather data.
